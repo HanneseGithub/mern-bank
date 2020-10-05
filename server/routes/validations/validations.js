@@ -34,5 +34,21 @@ const loginValidation = (data) => {
   return validationSchema.validate(data);
 }
 
+const transferValidation = (data) => {
+  const validationSchema = Joi.object({
+    accountFrom: Joi.string()
+    .length(15)
+    .required(),
+    accountTo: Joi.string()
+    .length(15)
+    .required(),
+    amount: Joi.number()
+    .min(0)
+  })
+
+  return validationSchema.validate(data);
+}
+
 module.exports.registerValidation = registerValidation;
 module.exports.loginValidation = loginValidation;
+module.exports.transferValidation = transferValidation;

@@ -1,0 +1,12 @@
+.dashboard--form-padding {
+  padding-left: 30px !important;
+}
+.dashboard-background {
+  background: rgb(1,42,150);
+  background: linear-gradient(135deg, rgba(1,42,150,1) 0%, rgba(16,144,189,1) 100%);
+}
+
+#logout {
+  position: absolute;
+  right: 16px;
+}

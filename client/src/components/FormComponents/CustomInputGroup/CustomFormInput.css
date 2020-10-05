@@ -1,0 +1,11 @@
+.rounded-edges {
+  border-radius: 50px !important;
+}
+
+.input {
+  height: 44px !important;
+}
+
+.text-input {
+  padding-left: 16px !important;
+}

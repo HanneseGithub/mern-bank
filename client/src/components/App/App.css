@@ -1,0 +1,7 @@
+.illustration {
+    height: 100%;
+    position:relative;
+    background:   url("../../assets/imgs/illustration.png") no-repeat;
+    background-size: cover;
+    background-position: center;
+}

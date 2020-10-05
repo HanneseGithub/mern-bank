@@ -13,7 +13,11 @@ app.use(express.json());
 // Enable cookie parsing everywhere
 app.use(cookieParser());
 // Enable cors
-app.use(cors());
+var corsOptions = {
+  origin: 'http://localhost:3000',
+  credentials: true
+}
+app.use(cors(corsOptions));
 
 // Define the routes
 const routes = require('./routes')

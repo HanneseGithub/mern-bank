@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
 
   // Create and assign a jwt token.
   // The first parameter will be the payload (data that you want to store/keep in the token), second one the secret key. Right now we are keeping user id in the token after logging in.
-  const token = jwt.sign({ _id: logInUser._id }, process.env.TOKEN_SECRET)
+  const token = jwt.sign({ _id: logInUser._id, firstname: logInUser.firstname }, process.env.TOKEN_SECRET)
 
   // Create a session log
   const sessionLog = new Session({
@@ -51,9 +51,15 @@ router.post('/', async (req, res) => {
 
   // Save session as a cookie
   res.cookie('authorization', token, {
-    httpOnly: true,
+    httpOnly: true
+    // sameSite: 'none',
+    // secure: true
   });
-  res.status(200).json({"message": 'You have successfully logged in!'})
+  res.status(200).json({
+    "message": 'You have successfully logged in!',
+    "firstname": logInUser.firstname
+  })
+
 });
 
 module.exports = router;
