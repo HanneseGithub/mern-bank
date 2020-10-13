@@ -56,8 +56,7 @@ router.post('/', async (req, res) => {
     // secure: true
   });
   res.status(200).json({
-    "message": 'You have successfully logged in!',
-    "firstname": logInUser.firstname
+    "message": 'You have successfully logged in!'
   })
 
 });

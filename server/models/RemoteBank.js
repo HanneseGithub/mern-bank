@@ -10,6 +10,10 @@ const RemoteBankSchema = new Schema({
         type: String,
         required: true
     },
+    apiKey: {
+        type: String,
+        required: true
+    },
     bankPrefix: {
         type: String,
         required: true,
@@ -20,7 +24,11 @@ const RemoteBankSchema = new Schema({
         type: String,
         required: true,
         minlength: 1
-    }
+    },
+    jwksUrl: {
+        type: String,
+        required: true
+    },
 });
 
 const RemoteBank = mongoose.model("remotebanks", RemoteBankSchema);

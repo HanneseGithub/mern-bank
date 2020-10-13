@@ -22,6 +22,8 @@ app.use(cors(corsOptions));
 // Define the routes
 const routes = require('./routes')
 
+const transactionProcess = require('./processes/transactionProcess')
+
 // When ... path is hit, use ...Router
 app.use("/users", routes.usersRouter);
 app.use("/sessions", routes.sessionsRouter);
@@ -43,6 +45,9 @@ mongoose.connect(process.env.DB_CONNECTION, {
 
 // Listen to the server
 const port = process.env.PORT || 9001;
+
+transactionProcess.transactionProcess();
+
 
 app.listen(port, () => {
   console.log(`Server kuulab port ${port} peal!`);

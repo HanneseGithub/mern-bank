@@ -139,7 +139,7 @@
             }
         },
         "/balance": {
-            "summary": "Get user's balance",
+            "summary": "User's balance related operations",
             "get": {
                 "tags": [
                     "balance"
@@ -170,56 +170,7 @@
             },
             "parameters": [
                 {
-                    "name": "authorization",
-                    "description": "User's session token",
-                    "schema": {},
-                    "in": "cookie",
-                    "required": true
-                }
-            ]
-        },
-        "/deposit/:amount": {
-            "summary": "Deposit money as an user",
-            "post": {
-                "tags": [
-                    "deposit"
-                ],
-                "parameters": [
-                    {
-                        "name": "authorization",
-                        "description": "User's session token",
-                        "schema": {},
-                        "in": "cookie",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/postDepositResponse"
-                                }
-                            }
-                        },
-                        "description": "Deposit successful"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/errorResponse"
-                                }
-                            }
-                        },
-                        "description": "Deposit fails"
-                    }
-                },
-                "summary": "Deposit money to user's account"
-            },
-            "parameters": [
-                {
-                    "name": "authorization",
+                    "name": "Authorization",
                     "description": "User's session token",
                     "schema": {},
                     "in": "cookie"
@@ -227,7 +178,7 @@
             ]
         },
         "/withdraw/:amount": {
-            "summary": "Withdraw money as an user",
+            "summary": "User's withdrawing related operations",
             "post": {
                 "tags": [
                     "withdraw"
@@ -238,7 +189,7 @@
                         "description": "User's session token",
                         "schema": {},
                         "in": "cookie",
-                        "required": true
+                        "required": false
                     }
                 ],
                 "responses": {
@@ -277,7 +228,7 @@
             }
         },
         "/logout": {
-            "summary": "Log user out of the account",
+            "summary": "User's log out related operations",
             "post": {
                 "tags": [
                     "logout"
@@ -295,6 +246,103 @@
                     }
                 }
             }
+        },
+        "/transfer": {
+            "summary": "User's transfers related operations",
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/postTransferRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "tags": [
+                    "transfer"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {}
+                        },
+                        "description": "Local transfer was a success!"
+                    },
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/postTransferResponse"
+                                }
+                            }
+                        },
+                        "description": "Remote transfer added to database"
+                    },
+                    "400": {
+                        "description": "Something wrong with the request"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                }
+                            }
+                        },
+                        "description": "Problems with reaching central bank"
+                    }
+                },
+                "summary": "Make a new transfer to a local or a remote bank"
+            },
+            "parameters": [
+                {
+                    "name": "Authorization",
+                    "description": "User's session token",
+                    "schema": {},
+                    "in": "cookie"
+                }
+            ]
+        },
+        "/deposit/:amount": {
+            "summary": "User's deposit related operations",
+            "post": {
+                "tags": [
+                    "deposit"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/postDepositResponse"
+                                }
+                            }
+                        },
+                        "description": "Deposit successful"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                }
+                            }
+                        },
+                        "description": "Deposit fails"
+                    }
+                },
+                "summary": "Deposit money to user's account"
+            },
+            "parameters": [
+                {
+                    "name": "authorization",
+                    "description": "User's session token",
+                    "schema": {},
+                    "in": "cookie"
+                }
+            ]
         }
     },
     "components": {
@@ -440,7 +488,8 @@
                 "description": "User's balance",
                 "type": "object",
                 "example": {
-                    "Your balance": "9000 euro"
+                    "firstname": "John",
+                    "balance": 50
                 }
             },
             "postDepositResponse": {
@@ -461,6 +510,74 @@
                 "description": "Successful log out",
                 "type": "object",
                 "example": "You have logged out!"
+            },
+            "postTransferRequest": {
+                "title": "Root Type for PostTransferRequest",
+                "description": "Request body when making POST /transfer request",
+                "required": [
+                    "accountFrom",
+                    "accountTo",
+                    "amount",
+                    "currency",
+                    "explanation"
+                ],
+                "type": "object",
+                "properties": {
+                    "accountFrom": {
+                        "description": "Sending account's account number",
+                        "type": "string"
+                    },
+                    "accountTo": {
+                        "description": "Receiving account's account number",
+                        "type": "string"
+                    },
+                    "currency": {
+                        "description": "Money currency that you're sending",
+                        "type": "string"
+                    },
+                    "amount": {
+                        "format": "int32",
+                        "description": "Amount that you wish to send",
+                        "type": "integer"
+                    },
+                    "explanation": {
+                        "description": "Reason of sending the money",
+                        "type": "string"
+                    }
+                },
+                "example": {
+                    "accountFrom": "83aSBerzxcbmM49",
+                    "accountTo": "83aWZ5Spc26AKZp",
+                    "currency": "eur",
+                    "amount": 1,
+                    "explanation": "This is an example of a transfer"
+                }
+            },
+            "postTransferResponse": {
+                "title": "Root Type for postTransferResponse",
+                "description": "Response for a successful transfer",
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "example": {
+                    "message": "Remote transfer added"
+                }
+            },
+            "postTransferLocalResponse": {
+                "title": "Root Type for postTransferLocalResponse",
+                "description": "Response for local successful transfer",
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "example": {
+                    "message": "Local transfer completed!"
+                }
             }
         }
     },
@@ -488,6 +605,10 @@
         {
             "name": "logout",
             "description": "Log out of the user's account\n"
+        },
+        {
+            "name": "transfer",
+            "description": "Transfer related operations\n"
         }
     ]
 }

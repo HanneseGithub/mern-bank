@@ -44,6 +44,10 @@ const transferValidation = (data) => {
     .required(),
     amount: Joi.number()
     .min(0)
+    .required(),
+    currency: Joi.required(),
+    explanation: Joi.string()
+    .required()
   })
 
   return validationSchema.validate(data);
