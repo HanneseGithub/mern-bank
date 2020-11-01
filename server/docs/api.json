@@ -10,8 +10,8 @@
     },
     "servers": [
         {
-            "url": "http://localhost:9000/",
-            "description": "Local development server"
+            "url": "http://localhost:9000",
+            "description": ""
         }
     ],
     "paths": {
@@ -41,7 +41,7 @@
                                 }
                             }
                         },
-                        "description": "Response in case of register is successful"
+                        "description": "User successfully registered"
                     },
                     "400": {
                         "content": {
@@ -51,13 +51,20 @@
                                 }
                             }
                         },
-                        "description": "Response in case of errors"
+                        "description": "Something wrong with the request"
                     },
                     "409": {
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/errorResponse"
+                                },
+                                "examples": {
+                                    "emailExists": {
+                                        "value": {
+                                            "error": "Email already in use!"
+                                        }
+                                    }
                                 }
                             }
                         },
@@ -102,7 +109,7 @@
                                 }
                             }
                         },
-                        "description": "Login successful"
+                        "description": "Login successful and authorization token saved as a cookie"
                     },
                     "400": {
                         "content": {
@@ -119,6 +126,13 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/errorResponse"
+                                },
+                                "examples": {
+                                    "invalidCredentials": {
+                                        "value": {
+                                            "error": "This email/password is invalid"
+                                        }
+                                    }
                                 }
                             }
                         },
@@ -129,6 +143,13 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/errorResponse"
+                                },
+                                "examples": {
+                                    "sessionLogError": {
+                                        "value": {
+                                            "error": "Could not create a session log."
+                                        }
+                                    }
                                 }
                             }
                         },
@@ -153,20 +174,27 @@
                                 }
                             }
                         },
-                        "description": "Successful balance call"
+                        "description": "Balance received successfully"
                     },
                     "401": {
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/errorResponse"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "value": {
+                                            "error": "Unauthorized action. Log in to do that."
+                                        }
+                                    }
                                 }
                             }
                         },
                         "description": "User's not logged in"
                     }
                 },
-                "summary": "Get user balance"
+                "summary": "Get user's balance"
             },
             "parameters": [
                 {
@@ -176,56 +204,6 @@
                     "in": "cookie"
                 }
             ]
-        },
-        "/withdraw/:amount": {
-            "summary": "User's withdrawing related operations",
-            "post": {
-                "tags": [
-                    "withdraw"
-                ],
-                "parameters": [
-                    {
-                        "name": "authorization",
-                        "description": "User's session token",
-                        "schema": {},
-                        "in": "cookie",
-                        "required": false
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/postWithdrawResponse"
-                                }
-                            }
-                        },
-                        "description": "Successful withdraw\n"
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/errorResponse"
-                                }
-                            }
-                        },
-                        "description": "Withdraw failed"
-                    },
-                    "409": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/errorResponse"
-                                }
-                            }
-                        },
-                        "description": "Insufficent funds"
-                    }
-                },
-                "summary": "Withdraw money from user's account"
-            }
         },
         "/logout": {
             "summary": "User's log out related operations",
@@ -244,7 +222,8 @@
                         },
                         "description": "Successful log out"
                     }
-                }
+                },
+                "summary": "Delete session cookie and log out"
             }
         },
         "/transfer": {
@@ -266,7 +245,11 @@
                 "responses": {
                     "200": {
                         "content": {
-                            "application/json": {}
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/postTransferLocalResponse"
+                                }
+                            }
                         },
                         "description": "Local transfer was a success!"
                     },
@@ -281,6 +264,13 @@
                         "description": "Remote transfer added to database"
                     },
                     "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                }
+                            }
+                        },
                         "description": "Something wrong with the request"
                     },
                     "500": {
@@ -305,7 +295,56 @@
                 }
             ]
         },
-        "/deposit/:amount": {
+        "/transfer/b2b": {
+            "summary": "Receive remote transfers",
+            "post": {
+                "tags": [
+                    "transfer"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/postTransferB2bResponse"
+                                }
+                            }
+                        },
+                        "description": "Transfer to Small Bank was a success"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                }
+                            }
+                        },
+                        "description": "Something was wrong with the sent jwt or saved jwksUrl"
+                    },
+                    "502": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                }
+                            }
+                        },
+                        "description": "Errors communicating with the central pank\n"
+                    }
+                },
+                "summary": "Send a transfer from remote bank to this bank"
+            },
+            "parameters": [
+                {
+                    "name": "Authorization",
+                    "description": "User's session token",
+                    "schema": {},
+                    "in": "cookie"
+                }
+            ]
+        },
+        "/deposit/{amount}": {
             "summary": "User's deposit related operations",
             "post": {
                 "tags": [
@@ -320,7 +359,7 @@
                                 }
                             }
                         },
-                        "description": "Deposit successful"
+                        "description": "Money depositing was a success"
                     },
                     "400": {
                         "content": {
@@ -330,7 +369,7 @@
                                 }
                             }
                         },
-                        "description": "Deposit fails"
+                        "description": "Money depositing failed"
                     }
                 },
                 "summary": "Deposit money to user's account"
@@ -341,8 +380,95 @@
                     "description": "User's session token",
                     "schema": {},
                     "in": "cookie"
+                },
+                {
+                    "name": "amount",
+                    "description": "Amount to deposit",
+                    "schema": {
+                        "type": "integer"
+                    },
+                    "in": "path",
+                    "required": true
                 }
             ]
+        },
+        "/withdraw/{amount}": {
+            "summary": "User's withdrawing related operations",
+            "post": {
+                "tags": [
+                    "withdraw"
+                ],
+                "parameters": [
+                    {
+                        "name": "authorization",
+                        "description": "User's session token",
+                        "schema": {},
+                        "in": "cookie",
+                        "required": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/postWithdrawResponse"
+                                }
+                            }
+                        },
+                        "description": "Money withdraw was a success\n"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                }
+                            }
+                        },
+                        "description": "Money withdrawing failed"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                }
+                            }
+                        },
+                        "description": "Insufficent funds"
+                    }
+                },
+                "summary": "Withdraw money from user's account"
+            },
+            "parameters": [
+                {
+                    "name": "amount",
+                    "in": "path",
+                    "required": true
+                }
+            ]
+        },
+        "/transfer/jwks": {
+            "summary": "Bank's jwksUrl",
+            "get": {
+                "tags": [
+                    "transfer"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/getTransferJwksResponse"
+                                }
+                            }
+                        },
+                        "description": "jwksUrl responds successfully with JWKS keys"
+                    }
+                },
+                "summary": "Get bank's JWKS keys"
+            }
         }
     },
     "components": {
@@ -496,20 +622,20 @@
                 "description": "Response for successful deposit",
                 "type": "object",
                 "example": {
-                    "You successfully deposited ": "... euro"
+                    "You successfully deposited ": "...€"
                 }
             },
             "postWithdrawResponse": {
                 "description": "Response in case of a successful withdraw",
                 "type": "object",
                 "example": {
-                    "You successfully withdrew ": "... euro"
+                    "You successfully withdrew ": "...€"
                 }
             },
             "postLogoutResponse": {
                 "description": "Successful log out",
                 "type": "object",
-                "example": "You have logged out!"
+                "example": "You have logged out - session token has been deleted!"
             },
             "postTransferRequest": {
                 "title": "Root Type for PostTransferRequest",
@@ -578,6 +704,79 @@
                 "example": {
                     "message": "Local transfer completed!"
                 }
+            },
+            "postTransferB2bRequest": {
+                "title": "Root Type for postTransferB2bRequest",
+                "description": "Request body for b2b transfer",
+                "type": "object",
+                "properties": {
+                    "jwt": {
+                        "description": "Payload containing transfer information and it's signed",
+                        "type": "string"
+                    }
+                },
+                "example": {
+                    "jwt": ""
+                }
+            },
+            "postTransferB2bResponse": {
+                "title": "Root Type for postTransferB2bResponse",
+                "description": "B2b transfer successful response",
+                "type": "object",
+                "properties": {
+                    "receiverName": {
+                        "description": "Name of the receiving user",
+                        "type": "string"
+                    }
+                },
+                "example": {
+                    "receiverName": "John"
+                }
+            },
+            "getTransferJwksResponse": {
+                "title": "Root Type for getTransferJwksResponse",
+                "description": "Successful jwksUrl response",
+                "type": "object",
+                "properties": {
+                    "keys": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "kty": {
+                                    "type": "string"
+                                },
+                                "kid": {
+                                    "type": "string"
+                                },
+                                "n": {
+                                    "type": "string"
+                                },
+                                "e": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "example": {
+                    "keys": [
+                        {
+                            "kty": "RSA",
+                            "kid": "KmmIiWrtvSTO6eZaZ_ZJJRt_vOo7T8bqc87uf-_1K5g",
+                            "n": "mUdBFzB6qUTA9G4XgnvhgF8cHlvex96qTXc7stfM9IPL7fWgoivOszyR4W3yR6uzIhf8eoDXw7LMJt0sQe-EfAWbSCmRMqJy3PfCkQRtlsc2P7zqXuDZUUD-wT1M_c0vZSuLomRgiC6Ht3KAkPYJnMuJ2WJBzwE9zpVsLuWJpIE",
+                            "e": "AQAB"
+                        }
+                    ]
+                }
+            }
+        },
+        "securitySchemes": {
+            "Authorization": {
+                "type": "apiKey",
+                "description": "Authorization cookie, which will be saved after successful sessions request ",
+                "name": "Authorization",
+                "in": "cookie"
             }
         }
     },

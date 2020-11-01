@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
     'email': req.body.email
   });
   if (!logInUser) {
-    return res.status(401).json({ "error": "This email does not exist!"});
+    return res.status(401).json({ "error": "This email is invalid!"});
   }
 
   // Check if password is correct. Bcrypt compares the inserted password against user's hashed password that bcrypt can only decrypt, and tells if it matches.

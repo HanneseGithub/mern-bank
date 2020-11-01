@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const verifyUser = require('./authorizations/authUser');
+const fs = require('fs');
+const jose = require('node-jose');
+const axios = require('axios');
+const { exchangeRates } = require('exchange-rates-api');
 
 // Import central pank refreshing logic.
 const refreshCentralPank = require('../processes/refreshCentralPank');
@@ -14,9 +18,7 @@ const Account = require("../models/Account");
 const User = require("../models/User");
 const RemoteBank = require("../models/RemoteBank");
 
-// Transfers - local transfer / money from my bank to other bank / money from other bank to my bank.
-
-// POST /transfer handles transaction sending.
+// POST /transfer handles transfer sending.
 router.post('/', verifyUser, async(req, res) => {
 
   // Validate transaction's parameter's with JOI. Make it catch errors.
@@ -91,7 +93,7 @@ router.post('/', verifyUser, async(req, res) => {
       });
 
       await localTransfer.save();
-      res.status(201).json({"message": "Local transfer completed!"});
+      res.status(200).json({"message": "Local transfer completed!"});
     };
 
     // Transfer 2: LOCAL -> REMOTE
@@ -107,7 +109,7 @@ router.post('/', verifyUser, async(req, res) => {
         if (typeof refreshResult.error !== 'undefined') {
           console.log("There was a problem with central bank communication");
           console.log(refreshResult.error);
-          res.status(500).json({message: "Problems with central pank. Try again later."});
+          res.status(500).json({error: "Problems with central pank. Try again later."});
         }
 
         // Check again if bank with that specific prefix is found after the update. (NB! Update takes 2 tries).
@@ -141,5 +143,169 @@ router.post('/', verifyUser, async(req, res) => {
     res.status(400).json({error: "Couldn't find bank prefix like that"});
   };
 });
+
+router.post('/b2b', async(req, res) => {
+
+  console.log('Processing incoming remote transaction');
+
+  let transaction;
+
+  // Save the incoming jwt.
+  const incomingJwt = req.body.jwt;
+
+  // JWT payload parsing
+  try {
+
+    // Split payload from the jwt.
+    const jwtPayload = incomingJwt.split('.')[1];
+
+
+    // Decode and parse it into a JSON.
+    transaction = JSON.parse(Buffer.from(jwtPayload, 'base64').toString());
+
+    console.log("Payload received: " + transaction);
+
+  } catch (err) {
+    return res.status(400).json({ error: 'Problems with parsing sent jwt: ' + err.message })
+  }
+
+  // Get local bank's account.
+  const accountTo = await Account.findOne({ accountnumber: transaction.accountTo });
+
+  // Check if accountTo exists.
+  if (!accountTo) {
+    return res.status(400).json({error: "Account was not found in our bank."});
+  }
+
+  // For debugging. Delete later.
+  console.log("Bank found: " + accountTo);
+
+  // Get the bank prefix, that tranfer is from.
+  const bankFromPrefix = transaction.accountFrom.substring(0, 3);
+  console.log("Account from bankprefix: " + bankFromPrefix);
+
+  // Check if bank from is a remote bank.
+  const bankFrom = await RemoteBank.findOne({ bankPrefix: bankFromPrefix });
+
+  // If bankFrom is not found.
+  if (!bankFrom) {
+    console.log("Could not find bankFrom from local remote banks list.");
+
+    // Refresh banks collection.
+    const refreshBanks = await refreshCentralPank.refreshCentralPank();
+
+    if (typeof refreshBanks !== 'undefined') {
+      console.log("Problems communicationg with central bank.");
+
+      res.status(502).json({error: "Error with central bank" + refreshBanks.error})
+    }
+
+    // Try getting the details of the remote bank again.
+    console.log("Trying to find remote bank from local collection again.");
+    bankFrom = await RemoteBank.findOne({ bankPrefix: bankFromPrefix });
+
+
+    // If remote bank is still not found.
+    if(!bankFrom) {
+      console.log("Remote bank still not found.");
+
+      return res.status(400).json({error: "The remote bank is not part of our central bank."})
+    }
+  }
+
+  // If bank is found we'll have access to jwksurl.
+  console.log("Got sending bank account's details!");
+  console.log(bankFrom.jwksUrl);
+
+
+  // if sending bank does not have jwksUrl.
+  if (!bankFrom.jwksUrl) {
+    console.log("jwksUrl of sending account not found!");
+
+    return res.status(500).json({error: "The jwksUrl of your bank is missing."})
+  }
+
+  // Get bank's public key
+  let keystore;
+  try {
+
+  // Get other bank's public key
+  console.log("Attempting to contact jwksUrl.");
+  const jwksUrlResponse = await axios.get(bankFrom.jwksUrl);
+
+  // Import the JWK-set as a keystore.
+  console.log("Importing public key to keystore");
+  keystore = await jose.JWK.asKeyStore(jwksUrlResponse.data);
+  } catch (err) {
+    console.log("Importing public key failed: " + err.message);
+    return res.status(400).json({error: "The jwksUrl of your bank is invalid"})
+  }
+
+  // Verify that the signature matches the payload and it's created with the private key which's public version we have.
+  console.log("Verifying signature.");
+  try {
+    await jose.JWS.createVerify(keystore).verify(jwt);
+  } catch (err) {
+    return res.status(400).json({error: "Invalid signature"});
+  }
+
+  // Save amount to an variable.
+  let amount = transaction.amount;
+
+  // Convert amount from another currency (if necessary).
+  if (accountTo.currency != transaction.currency) {
+    console.log("Converting the currency.");
+
+    // Get the currency rate.
+    const rate = await exchangeRates().latest().base(transaction.currency).symbols(accountTo.currency).fetch();
+
+    console.log(`1 ${transaction.currency} = 1 ${rate} ${accountTo.currency}`);
+
+    // Save the amount after currency exchange.
+    amount = parseInt(parseFloat(rate) * parseInt(amount).toFixed(0));
+  }
+
+  // Get user related to account to's account
+  const accountToUser = await User.findOne({_id: accountTo.userId});
+
+  // Increase accountTo's balance
+  console.log(`Increasing ${accountToUser.name} money by: ` + amount);
+
+  accountTo.balance = accountTo.balance + amount;
+
+  // Save the new amount.
+  accountTo.save();
+
+  // Create transaction
+  const remoteTransfer = await new Transfer({
+    userId: accountTo.userId,
+    amount: transaction.amount,
+    currency: transaction.currency,
+    accountFrom: transaction.accountFrom,
+    accountTo: transaction.accountTo,
+    explanation: transaction.explanation,
+    senderName: transaction.senderName,
+    receiverName: accountToUser.name,
+    status: "completed"
+  });
+
+  // Send back receiver name
+  res.status(200).json({receiverName: accountToUser.name});
+});
+
+router.get('/jwks', async(req, res) => {
+
+  // Create new keystore
+  console.log("Creating a new keystore");
+  const keystore = jose.JWK.createKeyStore();
+
+  // Add private key from file to keystore
+  console.log("Reading private key and adding it to keystore");
+  console.log();
+
+  await keystore.add(fs.readFileSync('./keys/private.key').toString(), 'pem')
+
+  return res.status(200).send(keystore.toJSON());
+})
 
 module.exports = router;

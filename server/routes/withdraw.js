@@ -22,7 +22,7 @@ router.post('/:amount', verifyUser, async (req, res) => {
         }
       }
     );
-    res.status(200).json({"You successfully withdrew ":  req.params.amount + "euro"});
+    res.status(200).json({"You successfully withdrew ":  req.params.amount + " €"});
   } catch(err) {
     res.status(400).json({"error" : "Could not withdraw money!"});
   }
