@@ -14,6 +14,10 @@ const accountSchema = new Schema({
     type: Number,
     default: 0
   },
+  currency: {
+    type: String,
+    default: 'EUR'
+  },
   user: {
     type: Schema.Types.ObjectId,
     ref: "User"

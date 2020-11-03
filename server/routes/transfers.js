@@ -19,10 +19,11 @@ const User = require("../models/User");
 const RemoteBank = require("../models/RemoteBank");
 
 router.get('/', verifyUser, async(req, res) => {
+  console.log("Retrieving transfers history");
 
   // Get logged in user's account number
   const currentAccount = await Account.findOne({user: req.user._id}).select('accountnumber');
-  if(!currentAccount) return res.status(400).json({error: "Couldn't find your account."});
+  if(!currentAccount) return res.status(500).json({error: "Couldn't find your account."});
 
   // Find the logged in user's sent transfers
   const sentTransfers = await Transfer.find({accountFrom: currentAccount.accountnumber, status: "completed"}).select('-status -_id -__v -userId -accountFrom');
@@ -30,48 +31,47 @@ router.get('/', verifyUser, async(req, res) => {
   // Find the user's received transfers
   const receivedTransfers = await Transfer.find({accountTo: currentAccount.accountnumber, status: "completed"}).select('-status -_id -__v -userId -accountTo');
 
-
   if (receivedTransfers || sentTransfers) {
     return res.status(200).json({
       transfers_sent: sentTransfers,
       transfers_received: receivedTransfers
   })} else {
-    return res.status(400).json("Could not find any transactions to display.");
+    return res.status(400).json({error: "Could not find any transactions to display."});
   }
 })
 
 // POST /transfer handles transfer sending.
-router.post('/', verifyUser, async(req, res) => {
+router.post('/', verifyUser, async (req, res) => {
 
   // Validate transaction's parameter's with JOI. Make it catch errors.
   const { error } = transferValidation(req.body);
 
   // If validation catches errors, it displays it quite specifically to request sender.
-  if(error) {
-    return res.status(400).json({"message": error.details[0].message});
+  if (error) {
+    return res.status(400).json({ "message": error.details[0].message });
   };
 
   try {
     // Cut away/isolate the bank prefixes.
-    const accountFromBankPrefix = req.body.accountFrom.slice(0,3);
-    const accountToBankPrefix = req.body.accountTo.slice(0,3);
+    const accountFromBankPrefix = req.body.accountFrom.slice(0, 3);
+    const accountToBankPrefix = req.body.accountTo.slice(0, 3);
 
     // Make sure that accountFrom prefix is from the LOCAL bank.
     if (accountFromBankPrefix != process.env.BANK_PREFIX) {
-      res.status(400).json({"error": "You shouldn't be making a transfer to this endpoint."})
+      res.status(400).json({ "error": "You shouldn't be making a transfer to this endpoint." })
     }
 
     // Get logged in user's account number and balance from DB.
-    const currAccountNumber = await Account.findOne({'user': req.user._id}).select('accountnumber balance');
+    const currAccountNumber = await Account.findOne({ 'user': req.user._id }).select('accountnumber balance');
 
     // Check if the logged in user's account could be found.
-    if (!currAccountNumber) return res.status(401).json({error: "You must be logged in to make a transfer."});
+    if (!currAccountNumber) return res.status(401).json({ error: "You must be logged in to make a transfer." });
 
     // Check if logged in user's account matches to the accountFrom account.
-    if(req.body.accountFrom !== currAccountNumber.accountnumber) return res.status(401).json({error: "You can only make transfers under your account. Please enter your account number again."});
+    if (req.body.accountFrom !== currAccountNumber.accountnumber) return res.status(401).json({ error: "You can only make transfers under your account. Please enter your account number again." });
 
     // Check if sending account has enough money.
-    if (currAccountNumber.balance < req.body.amount) return res.status(409).json({error: "Insufficent funds!"});
+    if (currAccountNumber.balance < req.body.amount) return res.status(409).json({ error: "Insufficent funds!" });
 
 
 
@@ -79,28 +79,28 @@ router.post('/', verifyUser, async(req, res) => {
     if (accountFromBankPrefix == process.env.BANK_PREFIX && accountToBankPrefix == process.env.BANK_PREFIX) {
 
       // Find the receiving local bank's data from the database.
-      const accountToExists = await Account.findOne({'accountnumber': req.body.accountTo});
+      const accountToExists = await Account.findOne({ 'accountnumber': req.body.accountTo });
 
       // Check if receiving bank was found from the database.
-      if (!accountToExists) return res.status(400).json({"error": "Please enter correct receiving account number!"})
+      if (!accountToExists) return res.status(400).json({ "error": "Please enter correct receiving account number!" })
 
       // Subtract transfer amount from the sending account's balance.
       const giveMoney = await Account.updateOne(
         currAccountNumber,
-      {
-        $inc: {
-          balance: -req.body.amount
-        }
-      });
+        {
+          $inc: {
+            balance: -req.body.amount
+          }
+        });
 
       // Add transfer amount to the receiving account's balance.
       const getMoney = await Account.updateOne(
         accountToExists,
-      {
-        $inc: {
-          balance: req.body.amount
-        }
-      });
+        {
+          $inc: {
+            balance: req.body.amount
+          }
+        });
 
       // Save the local transfer in the database.
       const localTransfer = new Transfer({
@@ -115,13 +115,13 @@ router.post('/', verifyUser, async(req, res) => {
       });
 
       await localTransfer.save();
-      res.status(200).json({"message": "Local transfer completed!"});
+      res.status(200).json({ "message": "Local transfer completed!" });
     };
 
     // Transfer 2: LOCAL -> REMOTE
     if (accountFromBankPrefix == process.env.BANK_PREFIX && accountToBankPrefix != process.env.BANK_PREFIX) {
       // Find receiving bank's bank prefix from local "remotebanks" collection.
-      const remoteBankTo = await RemoteBank.findOne({bankPrefix: accountToBankPrefix});
+      const remoteBankTo = await RemoteBank.findOne({ bankPrefix: accountToBankPrefix });
 
       if (!remoteBankTo) {
         // If the remote bank is not found, refresh remote bank collection for new remote banks.
@@ -131,17 +131,17 @@ router.post('/', verifyUser, async(req, res) => {
         if (typeof refreshResult.error !== 'undefined') {
           console.log("There was a problem with central bank communication");
           console.log(refreshResult.error);
-          res.status(500).json({error: "Problems with central pank. Try again later."});
+          res.status(500).json({ error: "Problems with central pank. Try again later." });
         }
 
         // Check again if bank with that specific prefix is found after the update. (NB! Update takes 2 tries).
         try {
-          const remoteBankToUpdated = await RemoteBank.findOne({bankPrefix: accountToBankPrefix});
+          const remoteBankToUpdated = await RemoteBank.findOne({ bankPrefix: accountToBankPrefix });
 
-          if(!remoteBankToUpdated) return res.status(400).json({message: "This prefix is not any of our banks!"});
+          if (!remoteBankToUpdated) return res.status(400).json({ message: "This prefix is not any of our banks!" });
         }
-        catch(errors) {
-          res.status(400).json({error: errors.message})
+        catch (errors) {
+          res.status(400).json({ error: errors.message })
         }
       }
 
@@ -158,15 +158,15 @@ router.post('/', verifyUser, async(req, res) => {
 
       await localTransfer.save();
 
-      res.status(201).json({"message": "Remote transfer added!"});
+      res.status(201).json({ "message": "Remote transfer added!" });
 
     }
-  } catch(err) {
-    res.status(400).json({error: "Couldn't find bank prefix like that"});
+  } catch (err) {
+    res.status(400).json({ error: "Couldn't find bank prefix like that" });
   };
 });
 
-router.post('/b2b', async(req, res) => {
+router.post('/b2b', async (req, res) => {
 
   console.log('Processing incoming remote transaction');
 
@@ -196,11 +196,8 @@ router.post('/b2b', async(req, res) => {
 
   // Check if accountTo exists.
   if (!accountTo) {
-    return res.status(400).json({error: "Account was not found in our bank."});
+    return res.status(400).json({ error: "Account was not found in our bank." });
   }
-
-  // For debugging. Delete later.
-  console.log("Bank found: " + accountTo);
 
   // Get the bank prefix, that tranfer is from.
   const bankFromPrefix = transaction.accountFrom.substring(0, 3);
@@ -219,7 +216,7 @@ router.post('/b2b', async(req, res) => {
     if (typeof refreshBanks !== 'undefined') {
       console.log("Problems communicationg with central bank.");
 
-      res.status(502).json({error: "Error with central bank" + refreshBanks.error})
+      res.status(502).json({ error: "Error with central bank" + refreshBanks.error })
     }
 
     // Try getting the details of the remote bank again.
@@ -228,47 +225,45 @@ router.post('/b2b', async(req, res) => {
 
 
     // If remote bank is still not found.
-    if(!bankFrom) {
+    if (!bankFrom) {
       console.log("Remote bank still not found.");
 
-      return res.status(400).json({error: "The remote bank is not part of our central bank."})
+      return res.status(400).json({ error: "The remote bank is not part of our central bank." })
     }
   }
 
   // If bank is found we'll have access to jwksurl.
   console.log("Got sending bank account's details!");
-  console.log(bankFrom.jwksUrl);
-
 
   // if sending bank does not have jwksUrl.
   if (!bankFrom.jwksUrl) {
     console.log("jwksUrl of sending account not found!");
 
-    return res.status(500).json({error: "The jwksUrl of your bank is missing."})
+    return res.status(500).json({ error: "The jwksUrl of your bank is missing." })
   }
 
   // Get bank's public key
   let keystore;
   try {
 
-  // Get other bank's public key
-  console.log("Attempting to contact jwksUrl.");
-  const jwksUrlResponse = await axios.get(bankFrom.jwksUrl);
+    // Get other bank's public key
+    console.log("Attempting to contact jwksUrl.");
+    const jwksUrlResponse = await axios.get(bankFrom.jwksUrl);
 
-  // Import the JWK-set as a keystore.
-  console.log("Importing public key to keystore");
-  keystore = await jose.JWK.asKeyStore(jwksUrlResponse.data);
+    // Import the JWK-set as a keystore.
+    console.log("Importing public key to keystore");
+    keystore = await jose.JWK.asKeyStore(jwksUrlResponse.data);
   } catch (err) {
     console.log("Importing public key failed: " + err.message);
-    return res.status(400).json({error: "The jwksUrl of your bank is invalid"})
+    return res.status(400).json({ error: "The jwksUrl of your bank is invalid" })
   }
 
   // Verify that the signature matches the payload and it's created with the private key which's public version we have.
   console.log("Verifying signature.");
   try {
-    await jose.JWS.createVerify(keystore).verify(jwt);
+    await jose.JWS.createVerify(keystore).verify(incomingJwt);
   } catch (err) {
-    return res.status(400).json({error: "Invalid signature"});
+    return res.status(400).json({ error: "Invalid signature" });
   }
 
   // Save amount to an variable.
@@ -281,23 +276,24 @@ router.post('/b2b', async(req, res) => {
     // Get the currency rate.
     const rate = await exchangeRates().latest().base(transaction.currency).symbols(accountTo.currency).fetch();
 
-    console.log(`1 ${transaction.currency} = 1 ${rate} ${accountTo.currency}`);
+    console.log(`1 ${transaction.currency} = ${rate} ${accountTo.currency}`);
 
     // Save the amount after currency exchange.
     amount = parseInt(parseFloat(rate) * parseInt(amount).toFixed(0));
   }
 
   // Get user related to account to's account
-  const accountToUser = await User.findOne({_id: accountTo.userId});
+  const accountToUser = await User.findOne({ _id: accountTo.user });
 
   // Increase accountTo's balance
-  console.log(`Increasing ${accountToUser.name} money by: ` + amount);
+  console.log(`Increasing ${accountToUser.firstname} ${accountToUser.lastname} money by: ` + amount);
 
   accountTo.balance = accountTo.balance + amount;
 
   // Save the new amount.
   accountTo.save();
 
+  console.log("Creating a new transfer log entry.")
   // Create transaction
   const remoteTransfer = await new Transfer({
     userId: accountTo.userId,
@@ -311,11 +307,13 @@ router.post('/b2b', async(req, res) => {
     status: "completed"
   });
 
+  await remoteTransfer.save();
+
   // Send back receiver name
-  res.status(200).json({receiverName: accountToUser.name});
+  res.status(200).json({ receiverName: `${accountToUser.firstname} ${accountToUser.lastname}` });
 });
 
-router.get('/jwks', async(req, res) => {
+router.get('/jwks', async (req, res) => {
 
   // Create new keystore
   console.log("Creating a new keystore");
