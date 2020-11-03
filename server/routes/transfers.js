@@ -18,6 +18,28 @@ const Account = require("../models/Account");
 const User = require("../models/User");
 const RemoteBank = require("../models/RemoteBank");
 
+router.get('/', verifyUser, async(req, res) => {
+
+  // Get logged in user's account number
+  const currentAccount = await Account.findOne({user: req.user._id}).select('accountnumber');
+  if(!currentAccount) return res.status(400).json({error: "Couldn't find your account."});
+
+  // Find the logged in user's sent transfers
+  const sentTransfers = await Transfer.find({accountFrom: currentAccount.accountnumber, status: "completed"}).select('-status -_id -__v -userId -accountFrom');
+
+  // Find the user's received transfers
+  const receivedTransfers = await Transfer.find({accountTo: currentAccount.accountnumber, status: "completed"}).select('-status -_id -__v -userId -accountTo');
+
+
+  if (receivedTransfers || sentTransfers) {
+    return res.status(200).json({
+      transfers_sent: sentTransfers,
+      transfers_received: receivedTransfers
+  })} else {
+    return res.status(400).json("Could not find any transactions to display.");
+  }
+})
+
 // POST /transfer handles transfer sending.
 router.post('/', verifyUser, async(req, res) => {
 

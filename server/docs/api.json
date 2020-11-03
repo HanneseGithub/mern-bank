@@ -228,6 +228,58 @@
         },
         "/transfer": {
             "summary": "User's transfers related operations",
+            "get": {
+                "tags": [
+                    "transfer"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/getTransferResponse"
+                                }
+                            }
+                        },
+                        "description": "Transaction history successfully retrieved"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                },
+                                "examples": {
+                                    "transfersHistoryError": {
+                                        "value": {
+                                            "error": "Could not find any transactions to display."
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "description": "Transaction history retrieving failed"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                },
+                                "examples": {
+                                    "accountFindError": {
+                                        "value": {
+                                            "error": "Couldn't find your account."
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "description": "Can not find user's account"
+                    }
+                },
+                "summary": "Retrieve send and received transfers"
+            },
             "post": {
                 "requestBody": {
                     "content": {
@@ -672,8 +724,8 @@
                     }
                 },
                 "example": {
-                    "accountFrom": "83aSBerzxcbmM49",
-                    "accountTo": "83aWZ5Spc26AKZp",
+                    "accountFrom": "9c5SBerzxcbmM49",
+                    "accountTo": "9c5WZ5Spc26AKZp",
                     "currency": "eur",
                     "amount": 1,
                     "explanation": "This is an example of a transfer"
@@ -703,20 +755,6 @@
                 },
                 "example": {
                     "message": "Local transfer completed!"
-                }
-            },
-            "postTransferB2bRequest": {
-                "title": "Root Type for postTransferB2bRequest",
-                "description": "Request body for b2b transfer",
-                "type": "object",
-                "properties": {
-                    "jwt": {
-                        "description": "Payload containing transfer information and it's signed",
-                        "type": "string"
-                    }
-                },
-                "example": {
-                    "jwt": ""
                 }
             },
             "postTransferB2bResponse": {
@@ -766,6 +804,33 @@
                             "kid": "KmmIiWrtvSTO6eZaZ_ZJJRt_vOo7T8bqc87uf-_1K5g",
                             "n": "mUdBFzB6qUTA9G4XgnvhgF8cHlvex96qTXc7stfM9IPL7fWgoivOszyR4W3yR6uzIhf8eoDXw7LMJt0sQe-EfAWbSCmRMqJy3PfCkQRtlsc2P7zqXuDZUUD-wT1M_c0vZSuLomRgiC6Ht3KAkPYJnMuJ2WJBzwE9zpVsLuWJpIE",
                             "e": "AQAB"
+                        }
+                    ]
+                }
+            },
+            "getTransferResponse": {
+                "title": "Root Type for getTransferResponse",
+                "description": "Transfer retrieving was successful",
+                "type": "object",
+                "example": {
+                    "transfers_sent": [
+                        {
+                            "createdAt": "2020-11-03T17:57:17.380Z",
+                            "amount": 1,
+                            "currency": "eur",
+                            "accountTo": "9c5WZ5Spc26AKZp",
+                            "explanation": "This is an example of a transfer",
+                            "senderName": "John"
+                        }
+                    ],
+                    "transfers_received": [
+                        {
+                            "createdAt": "2020-11-03T18:02:13.517Z",
+                            "amount": 1,
+                            "currency": "eur",
+                            "accountFrom": "9c5j5zwFKY4JC8g",
+                            "explanation": "This is an example of a transfer",
+                            "senderName": "Hannes"
                         }
                     ]
                 }

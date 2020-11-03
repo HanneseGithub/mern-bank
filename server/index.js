@@ -48,7 +48,6 @@ const port = process.env.PORT || 9001;
 
 transactionProcess.transactionProcess();
 
-
 app.listen(port, () => {
   console.log(`Server kuulab port ${port} peal!`);
 });
