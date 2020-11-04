@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 
+const verifyUser = require('./authorizations/authUser');
+
 // Import models
 const User = require("../models/User");
 const Account = require("../models/Account");
@@ -52,6 +54,26 @@ router.post("/", async (req, res) => {
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
+});
+
+router.get("/account", verifyUser, async (req, res) => {
+  console.log("Retrieving user's information")
+
+  // Get logged in user's user and account information
+  const currentUser = await User.findOne({_id: req.user._id});
+
+  if(!currentUser) return res.status(500).json({error: "Couldn't find you user information from the database."})
+
+  const currentAccount = await Account.findOne({user: req.user._id});
+
+  if(!currentAccount) return res.status(500).json({error: "Couldn't find your account information from the database."})
+
+  res.status(200).json({
+    firstname: currentUser.firstname,
+    lastname: currentUser.lastname,
+    email: currentUser.email,
+    accountnumber: currentAccount.accountnumber
+  })
 });
 
 module.exports = router;

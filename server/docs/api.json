@@ -521,6 +521,52 @@
                 },
                 "summary": "Get bank's JWKS keys"
             }
+        },
+        "/users/account": {
+            "summary": "User's account related information",
+            "get": {
+                "tags": [
+                    "users"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/getUsersAccount"
+                                }
+                            }
+                        },
+                        "description": "Account information successfully retrieved"
+                    },
+                    "500": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/errorResponse"
+                                },
+                                "examples": {
+                                    "accountInformationError": {
+                                        "value": {
+                                            "error": "Couldn't find your user/account information from the database."
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "description": "Couldn't find logged in user/account in the database"
+                    }
+                },
+                "summary": "Get user's account information"
+            },
+            "parameters": [
+                {
+                    "name": "Authorization",
+                    "description": "User's session token",
+                    "schema": {},
+                    "in": "cookie"
+                }
+            ]
         }
     },
     "components": {
@@ -833,6 +879,31 @@
                             "senderName": "Hannes"
                         }
                     ]
+                }
+            },
+            "getUsersAccount": {
+                "title": "Root Type for getUsersAccount",
+                "description": "Get user's account information",
+                "type": "object",
+                "properties": {
+                    "firstname": {
+                        "type": "string"
+                    },
+                    "lastname": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "accountnumber": {
+                        "type": "string"
+                    }
+                },
+                "example": {
+                    "firstname": "John",
+                    "lastname": "Doe",
+                    "email": "johndoe@example.com",
+                    "accountnumber": "9c5SBerzxcbmM49"
                 }
             }
         },
