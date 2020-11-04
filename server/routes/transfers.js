@@ -106,7 +106,7 @@ router.post('/', verifyUser, async (req, res) => {
       const localTransfer = new Transfer({
         userId: req.user._id,
         amount: req.body.amount,
-        currency: req.body.currency,
+        currency: "EUR",
         accountFrom: req.body.accountFrom,
         accountTo: req.body.accountTo,
         explanation: req.body.explanation,
@@ -149,7 +149,7 @@ router.post('/', verifyUser, async (req, res) => {
       const localTransfer = new Transfer({
         userId: req.user._id,
         amount: req.body.amount,
-        currency: req.body.currency,
+        currency: "EUR",
         accountFrom: req.body.accountFrom,
         accountTo: req.body.accountTo,
         explanation: req.body.explanation,

@@ -40,12 +40,11 @@ const transferValidation = (data) => {
     .length(15)
     .required(),
     accountTo: Joi.string()
-    .length(15)
+    .min(6)
     .required(),
     amount: Joi.number()
     .min(0)
     .required(),
-    currency: Joi.required(),
     explanation: Joi.string()
     .required()
   })

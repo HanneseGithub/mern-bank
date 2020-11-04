@@ -742,7 +742,6 @@
                     "accountFrom",
                     "accountTo",
                     "amount",
-                    "currency",
                     "explanation"
                 ],
                 "type": "object",
@@ -753,10 +752,6 @@
                     },
                     "accountTo": {
                         "description": "Receiving account's account number",
-                        "type": "string"
-                    },
-                    "currency": {
-                        "description": "Money currency that you're sending",
                         "type": "string"
                     },
                     "amount": {
@@ -772,7 +767,6 @@
                 "example": {
                     "accountFrom": "9c5SBerzxcbmM49",
                     "accountTo": "9c5WZ5Spc26AKZp",
-                    "currency": "eur",
                     "amount": 1,
                     "explanation": "This is an example of a transfer"
                 }
@@ -863,7 +857,7 @@
                         {
                             "createdAt": "2020-11-03T17:57:17.380Z",
                             "amount": 1,
-                            "currency": "eur",
+                            "currency": "EUR",
                             "accountTo": "9c5WZ5Spc26AKZp",
                             "explanation": "This is an example of a transfer",
                             "senderName": "John"
@@ -873,7 +867,7 @@
                         {
                             "createdAt": "2020-11-03T18:02:13.517Z",
                             "amount": 1,
-                            "currency": "eur",
+                            "currency": "EUR",
                             "accountFrom": "9c5j5zwFKY4JC8g",
                             "explanation": "This is an example of a transfer",
                             "senderName": "Hannes"
