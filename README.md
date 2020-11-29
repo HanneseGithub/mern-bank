@@ -8,3 +8,13 @@
 ### Who do I talk to? ###
 
 * hannes.juurma@khk.ee
+
+### Demo of the front-end created with ReactJS ###
+
+This was created before the whole project was ready. So it is just a part of the whole project.
+
+![](https://i.imgur.com/VnrmCL4.gif)
+
+![](https://i.imgur.com/uodF8my.gif)
+
+![](https://i.imgur.com/2m13OaU.gif)
